@@ -60,7 +60,7 @@ def setup_logging():
     
     return logger
 
-# Global variables to track trades and performance in 30-minute intervals
+# Global variables to track trades and performance in 1hour intervals
 trade_history = []
 performance_metrics = {}
 
@@ -112,7 +112,7 @@ def get_historical_data():
         'volume': 'Volume'
     })
     
-    logger.info(f"Fetched {len(df)} minute bars for {TICKER}")
+    logger.info(f"Fetched {len(df)} hour bars for {TICKER}")
     return df
 
 def calculate_signals(pd_data):
@@ -253,7 +253,7 @@ def print_bot_header():
 def print_detailed_signals(signals_df):
     """Print detailed information for each bar in the dataframe with all signals"""
     print(f"{'=' * 60}")
-    logger.info(f"DETAILED SIGNAL ANALYSIS FOR LAST {min(10, len(signals_df))} OF {len(signals_df)} BARS")
+    logger.info(f"DETAILED SIGNAL ANALYSIS FOR ALL {len(signals_df)} BARS")
     print("\n")
 
     header = (
@@ -276,7 +276,7 @@ def print_detailed_signals(signals_df):
     
     # Print most recent rows with proper formatting
     for i, row in signals_df.tail(10).iterrows():
-        # Format date (include time for minute data)
+        # Format date (include time for hour data)
         if isinstance(row['Date'], pd.Timestamp):
             date_str = row['Date'].strftime('%Y-%m-%d %H:%M')
         else:
@@ -314,9 +314,9 @@ def print_detailed_signals(signals_df):
 def print_signal_update(latest_bar, current_price, current_position, signal_count=1):
     """Print a nicely formatted signal update"""
     print(f"{'=' * 60}")
-    logger.info(f"1-Minute SIGNAL UPDATE #{signal_count} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"1-Hour SIGNAL UPDATE #{signal_count} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Format datetime for minute data
+    # Format datetime for hour data
     if isinstance(latest_bar['Date'], pd.Timestamp):
         date_str = latest_bar['Date'].strftime('%Y-%m-%d %H:%M:%S')
     else:
