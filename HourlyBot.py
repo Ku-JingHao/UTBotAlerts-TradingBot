@@ -5,7 +5,7 @@ import vectorbt as vbt
 import time
 import logging
 import colorama
-import keyboard  # Add this import to handle keyboard input
+import keyboard  
 from datetime import datetime, timedelta
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
@@ -60,9 +60,9 @@ def setup_logging():
     
     return logger
 
-# Global variables to track trades and weekly performance
+# Global variables to track trades and performance in 30-minute intervals
 trade_history = []
-weekly_performance = {}
+performance_metrics = {}
 
 # UT Bot Parameters
 SENSITIVITY = 1
@@ -70,11 +70,11 @@ ATR_PERIOD = 10
 
 # Trading Parameters
 TICKER = "BTC/USD" 
-INTERVAL = "1h"
+INTERVAL = "1h"  
 
 # Alpaca API credentials
-ALPACA_API_KEY = "PKCRL2GR9JEO7MWNAXLI"
-ALPACA_SECRET_KEY = "808AQEP0SNfbMbGfp0LQANuZfPcxU97etX5hCrOJ"
+ALPACA_API_KEY = "PKF7KL9M2LR4G78GTXXD"
+ALPACA_SECRET_KEY = "zALGwTgvtPqwEwvFf0TgW8R68TAD0KpuIl95bene"
 
 # Initialize Alpaca clients
 trading_client = TradingClient(ALPACA_API_KEY, ALPACA_SECRET_KEY, paper=True)
@@ -83,10 +83,10 @@ data_client = CryptoHistoricalDataClient()
 def get_historical_data():
     """Fetch historical data from Alpaca for the specified ticker and timeframe"""
 
-    timeframe = TimeFrame.Hour
+    timeframe = TimeFrame.Hour 
     
     end = datetime.now()
-    start = end - timedelta(days=10)
+    start = end - timedelta(days=10)  
     
     # Create the request
     request_params = CryptoBarsRequest(
@@ -112,7 +112,7 @@ def get_historical_data():
         'volume': 'Volume'
     })
     
-    # logger.info(f"Fetched {len(df)} days historical bars for {TICKER}")
+    logger.info(f"Fetched {len(df)} minute bars for {TICKER}")
     return df
 
 def calculate_signals(pd_data):
@@ -163,7 +163,7 @@ def get_current_position():
     try:
         positions = trading_client.get_all_positions()
         for position in positions:
-            if position.symbol == "BTC/USD":  
+            if position.symbol == "BTCUSD":  
                 return float(position.qty)
         return 0
     except Exception as e:
@@ -183,10 +183,8 @@ def execute_trade(side, price):
         buying_power = float(account.buying_power)  # Total buying power (including margin, if any)
         
         if side == OrderSide.BUY:
-            # Calculate quantity based on available cash with a 2% safety margin
-            safety_margin = 0.98  # Use 98% of available cash to avoid balance errors
-            cash_to_use = cash_balance * safety_margin
-            quantity = cash_to_use / price
+            trade_amount  = 1000  
+            quantity =  trade_amount / price
             cash_left = cash_balance - (quantity * price)
         else:
             # Sell all the shares we have
@@ -255,11 +253,11 @@ def print_bot_header():
 def print_detailed_signals(signals_df):
     """Print detailed information for each bar in the dataframe with all signals"""
     print(f"{'=' * 60}")
-    logger.info(f"DETAILED SIGNAL ANALYSIS FOR ALL {len(signals_df)} BARS")
+    logger.info(f"DETAILED SIGNAL ANALYSIS FOR LAST {min(10, len(signals_df))} OF {len(signals_df)} BARS")
     print("\n")
 
     header = (
-        f"{'Date':<12} | "
+        f"{'Date/Time':<20} | "
         f"{'Open':>10} | "
         f"{'High':>10} | "
         f"{'Low':>10} | "
@@ -274,15 +272,15 @@ def print_detailed_signals(signals_df):
     )
     
     logger.info(header)
-    logger.info(f"{'-' * 60}")
+    logger.info(f"{'-' * 80}")
     
-    # Print each row with proper formatting
-    for i, row in signals_df.iterrows():
-        # Format date (keep only the date part if it's a datetime object)
+    # Print most recent rows with proper formatting
+    for i, row in signals_df.tail(10).iterrows():
+        # Format date (include time for minute data)
         if isinstance(row['Date'], pd.Timestamp):
-            date_str = row['Date'].strftime('%Y-%m-%d')
+            date_str = row['Date'].strftime('%Y-%m-%d %H:%M')
         else:
-            date_str = str(row['Date'])[:10]
+            date_str = str(row['Date'])[:16]
 
         if row['Buy']:
             signal_color = Fore.CYAN
@@ -295,7 +293,7 @@ def print_detailed_signals(signals_df):
             signal_text = "NONE ⚪"
         
         row_data = (
-            f"{date_str:<12} | "
+            f"{date_str:<20} | "
             f"${row['Open']:>9.2f} | "
             f"${row['High']:>9.2f} | "
             f"${row['Low']:>9.2f} | "
@@ -316,8 +314,15 @@ def print_detailed_signals(signals_df):
 def print_signal_update(latest_bar, current_price, current_position, signal_count=1):
     """Print a nicely formatted signal update"""
     print(f"{'=' * 60}")
-    logger.info(f"Hourly SIGNAL UPDATE #{signal_count} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info(f"Date Time      : {latest_bar['Date']}")
+    logger.info(f"1-Minute SIGNAL UPDATE #{signal_count} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Format datetime for minute data
+    if isinstance(latest_bar['Date'], pd.Timestamp):
+        date_str = latest_bar['Date'].strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        date_str = str(latest_bar['Date'])
+    
+    logger.info(f"Date Time      : {date_str}")
     logger.info(f"Price          : ${current_price:.2f}")
     logger.info(f"ATR Stop       : ${latest_bar['ATRTrailingStop']:.2f}")
     logger.info(f"Position       : {current_position} {TICKER.split('/')[0]}")
@@ -339,9 +344,9 @@ def print_waiting_message(next_check_time):
     
     # Calculate time remaining
     time_remaining = next_check_time - datetime.now()
-    minutes, seconds = divmod(time_remaining.seconds, 60)
+    seconds = time_remaining.seconds
     
-    logger.info(f"Time Remaining : {minutes:02d}:{seconds:02d}")
+    logger.info(f"Time Remaining : {seconds:.0f} seconds")
     
     # Show current market status - this remains similar for crypto since crypto markets are 24/7
     current_time = datetime.now()
@@ -365,10 +370,10 @@ def run_live_trading():
     
     last_check_hour = None
     signal_count = 0  
-    waiting_message_shown = False  
+    waiting_message_shown = False
 
     # Print instructions for stopping the bot
-    logger.info(f"{Fore.YELLOW}To stop the bot and view ROI summary, hold the 'q' key 5 seconds.{Style.RESET_ALL}")
+    logger.info(f"{Fore.YELLOW}To stop the bot and view ROI summary, hold the 'q' key for a few seconds.{Style.RESET_ALL}")
 
     try:
         while True:
@@ -378,11 +383,12 @@ def run_live_trading():
                     logger.info("Bot stopped by user. Calculating ROI summary...")
                     calculate_roi_summary()
                     break
+                
                 # Get current hour
                 current_datetime = datetime.now()
                 current_hour = current_datetime.replace(minute=0, second=0, microsecond=0)
 
-                # Only process once per hour for hourly timeframe
+                # Only process once per hour for 1-hour timeframe
                 if last_check_hour != current_hour:
                     # Reset waiting message flag when starting a new hour check
                     waiting_message_shown = False
@@ -422,8 +428,8 @@ def run_live_trading():
                     
                     # Record that we checked this hour
                     last_check_hour = current_hour
-                    
-                # Calculate next check time (top of next hour)
+                            
+                # Calculate next check time (next hour)
                 next_check_time = current_datetime + timedelta(hours=1)
 
                 # Show waiting message only once after processing signals and if not already shown
@@ -431,12 +437,12 @@ def run_live_trading():
                     print_waiting_message(next_check_time)
                     waiting_message_shown = True  
                 
-                time.sleep(5)  #seconds
+                time.sleep(5)  # Check every minute (less frequent for 1-hour strategy)
                 
             except Exception as e:
                 logger.error(f"Error in live trading execution: {e}")
                 logger.error(f"{'=' * 60}")
-                time.sleep(60)  #seconds
+                time.sleep(60)  # Longer retry time for 1-hour strategy
 
     except KeyboardInterrupt:
         # Handle Ctrl+C gracefully
@@ -456,7 +462,7 @@ def run_signal_test():
     
     df = get_historical_data() # Get historical data
     signals_df = calculate_signals(df) # Calculate signals
-    print_detailed_signals(signals_df) # Print detailed signals for all bars
+    print_detailed_signals(signals_df) # Print detailed signals for recent bars
     latest_bar = signals_df.iloc[-1] # Check latest signal (most recent bar)
     current_price = latest_bar['Close']
 
@@ -476,36 +482,96 @@ def run_signal_test():
     print(f"{'=' * 60}")
 
 def calculate_roi_summary():
-    """Calculate and print ROI summary for each week"""
+    """Calculate and print ROI summary for each weekly interval"""
     if not trade_history:
         logger.info("No trades executed. ROI summary not available.")
         return
     
-    # Group trades by week
+    # Group trades by weekly intervals
     for trade in trade_history:
-        week_start = trade['timestamp'] - timedelta(days=trade['timestamp'].weekday())
-        week_key = week_start.strftime('%Y-%m-%d')
-        if week_key not in weekly_performance:
-            weekly_performance[week_key] = {
+        # Create a weekly interval key 
+        interval_time = trade['timestamp'].replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) - timedelta(days=trade['timestamp'].weekday())
+        interval_key = interval_time.strftime('%Y-%m-%d')
+        
+        if interval_key not in performance_metrics:
+            performance_metrics[interval_key] = {
                 'initial_cash': trade['cash_left'] + (trade['quantity'] * trade['price'] if trade['side'] == OrderSide.SELL else trade['cash_left']),
                 'final_cash': trade['cash_left'],
                 'trades': []
             }
-        weekly_performance[week_key]['trades'].append(trade)
-        weekly_performance[week_key]['final_cash'] = trade['cash_left']
+        performance_metrics[interval_key]['trades'].append(trade)
+        performance_metrics[interval_key]['final_cash'] = trade['cash_left']
     
-    # Calculate ROI for each week
-    week_counter = 1  # Initialize week counter
-    for week, data in weekly_performance.items():
+    # Calculate ROI for each weekly interval
+    interval_counter = 1  # Initialize interval counter
+    print(f"{'=' * 60}")
+    logger.info(f"{Fore.CYAN}PERFORMANCE SUMMARY BY WEEKLY INTERVALS{Style.RESET_ALL}")
+    
+    for interval, data in sorted(performance_metrics.items()):
         initial_cash = data['initial_cash']
         final_cash = data['final_cash']
         roi = ((final_cash - initial_cash) / initial_cash) * 100
-        logger.info(f"Week {week_counter} ({week}) ROI: {roi:.2f}%")
-        logger.info(f"Initial Cash: ${initial_cash:.2f}")
-        logger.info(f"Final Cash: ${final_cash:.2f}")
+        
+        # Color code the ROI based on performance
+        if roi > 0:
+            roi_color = Fore.GREEN
+        elif roi < 0:
+            roi_color = Fore.RED
+        else:
+            roi_color = Fore.YELLOW
+            
+        logger.info(f"Week {interval_counter}: {interval}")
+        logger.info(f"Initial Cash   : ${initial_cash:.2f}")
+        logger.info(f"Final Cash     : ${final_cash:.2f}")
+        logger.info(f"ROI            : {roi_color}{roi:+.2f}%{Style.RESET_ALL}")
         logger.info(f"Number of Trades: {len(data['trades'])}")
-        print(f"{'=' * 60}")
-        week_counter += 1  # Increment week counter
+        logger.info(f"{'-' * 40}")
+        interval_counter += 1
+    
+    # Calculate overall performance
+    if trade_history:
+        first_trade = trade_history[0]
+        last_trade = trade_history[-1]
+        
+        # Get initial capital
+        overall_initial = first_trade['cash_left'] + (first_trade['quantity'] * first_trade['price'] if first_trade['side'] == OrderSide.SELL else first_trade['cash_left'])
+        
+        # For final value, check if we have an open position
+        current_position = get_current_position()
+        
+        if current_position > 0:
+            # Get latest price to value the position
+            try:
+                df = get_historical_data()
+                signals_df = calculate_signals(df)
+                current_price = signals_df.iloc[-1]['Close']
+                position_value = current_position * current_price
+                overall_final = last_trade['cash_left'] + position_value
+                logger.info(f"Open position  : {current_position} BTC valued at ${position_value:.2f}")
+            except Exception as e:
+                logger.error(f"Error getting current position value: {e}")
+                overall_final = last_trade['cash_left']
+        else:
+            overall_final = last_trade['cash_left']
+            
+        overall_roi = ((overall_final - overall_initial) / overall_initial) * 100
+        
+        logger.info(f"{Fore.CYAN}OVERALL PERFORMANCE{Style.RESET_ALL}")
+        logger.info(f"Starting Capital: ${overall_initial:.2f}")
+        logger.info(f"Current Capital : ${overall_final:.2f}")
+        
+        if overall_roi > 0:
+            logger.info(f"Total ROI       : {Fore.GREEN}+{overall_roi:.2f}%{Style.RESET_ALL}")
+        elif overall_roi < 0:
+            logger.info(f"Total ROI       : {Fore.RED}{overall_roi:.2f}%{Style.RESET_ALL}")
+        else:
+            logger.info(f"Total ROI       : {Fore.YELLOW}{overall_roi:.2f}%{Style.RESET_ALL}")
+            
+        logger.info(f"Total Trades    : {len(trade_history)}")
+    
+    print(f"{'=' * 60}")
 
 if __name__ == "__main__":
     #run_signal_test()  # Use this to test signals without trading
