@@ -1,0 +1,13 @@
+Talib Download Website : https://sourceforge.net/projects/talib-whl/
+
+pip install pandas
+pip install TA_Lib-0.4.28-cp312-cp312-win_amd64.whl
+pip install vectorbt
+pip install alpaca-py 
+pip install keyboard 
+pip install vectorbt --user
+pip install pywhatkit --user
+
+pip install vectorbt alpaca-py keyboard pywhatkit 
+cd "C:\Users\LocationAnalytics\Desktop\UT Bot Alerts\crypto"
+cd \Users\PCuser\Desktop\UTBotAlerts\Tradingbot-main\specific_crypto
