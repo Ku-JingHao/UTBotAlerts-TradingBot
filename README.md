@@ -99,5 +99,5 @@ pip install pandas numpy ta-lib vectorbt colorama keyboard alpaca-py pywhatkit y
 
 This project is for research and educational purposes only. **Trading involves risk.** Use paper trading for testing and do not risk real capital unless you fully understand the risks involved.
 
-**License:**  
-MIT License
+## License  
+This project is licensed under the MIT License
